@@ -125,15 +125,17 @@ function SearchResultContent() {
     { name: '나트륨', value: (foodData.sodium || 0) / 1000, color: '#ec4899' },
   ];
 
-  const nutritionTable = {
+  const nutritionTable: Record<string, string> = {
     "칼로리(kcal)": foodData.calories.toString(),
     "수분(g)": foodData.water.toString(),
     "탄수화물(g)": foodData.carbohydrate.toString(),
     "단백질(g)": foodData.protein.toString(),
     "지방(g)": foodData.fat.toString(),
     "당류(g)": foodData.sugar.toString(),
+    "식이섬유(g)": foodData.dietaryFiber !== undefined ? foodData.dietaryFiber.toString() : '0',
     "나트륨(mg)": foodData.sodium.toString(),
-    "칼륨(mg)": foodData.potassium.toString()
+    "칼륨(mg)": foodData.potassium.toString(),
+    "비타민 및 기타": foodData.vitamins && foodData.vitamins.length > 0 ? foodData.vitamins.join(', ') : '해당 없음'
   };
   
   const solidContentCalculation = `총 고형분 함량 = 100g - ${foodData.water}g = ${100 - foodData.water}g`;
