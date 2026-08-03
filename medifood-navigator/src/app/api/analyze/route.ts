@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { searchFood } from '@/lib/mockData';
-
 const apiKey = process.env.GEMINI_API_KEY || '';
 let genAI: GoogleGenerativeAI | null = null;
 if (apiKey) {
@@ -10,16 +8,10 @@ if (apiKey) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, diseases } = await request.json();
-
-    if (!query) {
-      return NextResponse.json({ error: '검색어를 입력해주세요.' }, { status: 400 });
-    }
-
-    const foodData = searchFood(query);
+    const { foodData, diseases } = await request.json();
 
     if (!foodData) {
-      return NextResponse.json({ error: 'DB에서 해당 식품을 찾을 수 없습니다.' }, { status: 404 });
+      return NextResponse.json({ error: '식품 정보가 제공되지 않았습니다.' }, { status: 400 });
     }
 
     // Gemini API 호출 준비

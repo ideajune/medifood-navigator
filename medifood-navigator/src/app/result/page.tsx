@@ -58,7 +58,7 @@ function SearchResultContent() {
         setFoodLoading(false);
         
         // 식품 데이터를 성공적으로 가져오면 AI 분석 시작
-        fetchAnalysis();
+        fetchAnalysis(result.foodData);
       } catch (err) {
         setError('서버와 통신할 수 없습니다.');
         setFoodLoading(false);
@@ -66,13 +66,13 @@ function SearchResultContent() {
       }
     };
 
-    const fetchAnalysis = async () => {
+    const fetchAnalysis = async (data: NutrientInfo) => {
       setAnalysisLoading(true);
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, diseases: selectedDiseases }),
+          body: JSON.stringify({ foodData: data, diseases: selectedDiseases }),
         });
         
         const result = await res.json();
