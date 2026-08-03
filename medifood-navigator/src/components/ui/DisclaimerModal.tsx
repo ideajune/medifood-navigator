@@ -1,16 +1,24 @@
-'use client';
-import { useAppStore } from '@/store/useAppStore';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, X } from 'lucide-react';
 
-export default function DisclaimerModal() {
-  const { hasAgreedDisclaimer, setHasAgreedDisclaimer } = useAppStore();
+interface DisclaimerModalProps {
+  isOpen: boolean;
+  onAgree: () => void;
+  onClose: () => void;
+}
 
-  if (hasAgreedDisclaimer) return null;
+export default function DisclaimerModal({ isOpen, onAgree, onClose }: DisclaimerModalProps) {
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-6 bg-red-50 border-b border-red-100 flex items-center gap-3">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] relative">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 bg-white rounded-full hover:bg-gray-100 transition-colors z-10"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        <div className="p-6 bg-red-50 border-b border-red-100 flex items-center gap-3 pr-14">
           <ShieldAlert className="w-8 h-8 text-medifood-red flex-shrink-0" />
           <h2 className="text-xl font-bold text-red-900">법적 면책 조항 동의</h2>
         </div>
@@ -23,7 +31,7 @@ export default function DisclaimerModal() {
         </div>
         <div className="p-6 bg-gray-50 border-t border-gray-100">
           <button
-            onClick={() => setHasAgreedDisclaimer(true)}
+            onClick={onAgree}
             className="touch-target w-full bg-medifood-red hover:bg-red-700 text-white font-bold text-lg rounded-xl transition-colors py-4 shadow-md cursor-pointer"
           >
             위 내용을 확인하였으며, 동의합니다
