@@ -28,24 +28,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         foodData,
         analysis: {
-          step1: {
-            nutritionTable: {
-              "칼로리(kcal)": foodData.calories.toString(),
-              "수분(g)": foodData.water.toString(),
-              "탄수화물(g)": foodData.carbohydrate.toString(),
-              "단백질(g)": foodData.protein.toString(),
-              "지방(g)": foodData.fat.toString(),
-              "당류(g)": foodData.sugar.toString(),
-              "나트륨(mg)": foodData.sodium.toString(),
-              "칼륨(mg)": foodData.potassium.toString()
-            },
-            solidContentCalculation: `총 고형분 함량 = 100g - ${foodData.water}g = ${100 - foodData.water}g`
-          },
-          step2: {
-            percentages: {
-              "탄수화물": "0%", "단백질": "0%", "지방": "0%"
-            }
-          },
           step3: ['(API Key 없음) 풍부한 영양소를 함유하고 있습니다.'],
           step4: {
             targets: "API 키가 없어 대상을 분석할 수 없습니다.",
@@ -77,36 +59,11 @@ Tier 3 (만성 수치 변화 - 고혈압): 나트륨 섭취 주의.
 Tier 4 (체력/면역력 - 암): Tier 1~3과 상충 시 제한 사항을 무조건 우선시함.
 
 [요구사항]
-Step 1: 입력된 영양 성분을 기반으로 필수 항목(칼로리, 수분, 탄수화물, 단백질, 지방, 당류, 포화지방, 트랜스지방, 콜레스테롤, 나트륨, 비타민, 식이섬유, 칼륨, 기타)에 대한 표 데이터를 생성하고, '총 고형분 함량 = 100g - 수분(g)' 공식을 적용한 계산 결과를 포함하세요.
-Step 2: Step 1의 고형분 함량을 기준으로 각 영양소가 차지하는 백분율(%)을 직접 계산하여 반환하세요.
 Step 3: 영양학적 가치가 높은 핵심 성분 2~3가지를 선정하여 건강에 미치는 영향을 간결한 불릿 포인트로 반환하세요. (반드시 성분명 뒤에 100g 당 함량을 괄호 속에 표기할 것. 예: 성분명(00mg) - 효능 설명)
 Step 4: 섭취 주의 대상과 과다 섭취 시 발생할 수 있는 주요 부작용을 구체적으로 반환하세요.
 
 [출력 JSON 포맷]
 {
-  "step1": {
-    "nutritionTable": {
-      "칼로리(kcal)": "0",
-      "수분(g)": "0",
-      "탄수화물(g)": "0",
-      "단백질(g)": "0",
-      "지방(g)": "0",
-      "당류(g)": "0",
-      "나트륨(mg)": "0",
-      "칼륨(mg)": "0",
-      "식이섬유(g)": "0",
-      "기타": "0"
-    },
-    "solidContentCalculation": "총 고형분 함량 = 100g - 0g = 100g"
-  },
-  "step2": {
-    "percentages": {
-      "탄수화물(g)": "0%",
-      "단백질(g)": "0%",
-      "지방(g)": "0%",
-      "기타": "0%"
-    }
-  },
   "step3": [
     "성분명(함량) - 핵심 성분 효능 1",
     "성분명(함량) - 핵심 성분 효능 2"
