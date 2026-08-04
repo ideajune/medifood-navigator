@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getAnalysisFromCache, saveAnalysisToCache } from '@/lib/cache';
 const apiKey = process.env.GEMINI_API_KEY || '';
 let genAI: GoogleGenerativeAI | null = null;
 if (apiKey) {
@@ -14,9 +15,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '식품 정보가 제공되지 않았습니다.' }, { status: 400 });
     }
 
-    // 캐싱된 데이터(preCalculatedAnalysis)가 존재하면 API를 호출하지 않고 캐시 텍스트를 스트리밍 반환
-    if (foodData.preCalculatedAnalysis) {
-      const cachedText = foodData.preCalculatedAnalysis;
+    // 캐싱된 데이터(preCalculatedAnalysis 또는 data.json 캐시)가 존재하면 API를 호출하지 않고 캐시 텍스트를 스트리밍 반환
+    const cachedText = (await getAnalysisFromCache(foodData.name, diseases || [])) || foodData.preCalculatedAnalysis;
+    
+    if (cachedText) {
       const stream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
@@ -97,10 +99,15 @@ Tier 4 (체력/면역력 - 암): Tier 1~3과 상충 시 제한 사항을 무조�
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
+        let fullText = '';
         try {
           for await (const chunk of result.stream) {
-            controller.enqueue(encoder.encode(chunk.text()));
+            const textChunk = chunk.text();
+            fullText += textChunk;
+            controller.enqueue(encoder.encode(textChunk));
           }
+          // 스트림이 끝나면 생성된 전체 텍스트를 캐시에 저장
+          saveAnalysisToCache(foodData.name, diseases || [], fullText).catch(console.error);
         } catch (e: any) {
           console.error('Streaming error:', e);
           controller.enqueue(encoder.encode(`\n[ERROR] ${e.message}`));

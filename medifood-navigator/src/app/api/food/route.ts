@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchFood } from '@/lib/mockData';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getFoodFromCache, saveFoodToCache } from '@/lib/cache';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 let genAI: GoogleGenerativeAI | null = null;
@@ -18,7 +19,12 @@ export async function POST(request: NextRequest) {
 
     let foodData = searchFood(query);
 
-    // DB에 없는 경우 Gemini AI를 사용하여 동적 생성 (Fallback)
+    // 1. 정적 DB(mockData)에 없으면 로컬 파일 캐시(data.json) 조회
+    if (!foodData) {
+      foodData = await getFoodFromCache(query);
+    }
+
+    // 2. 캐시에도 없는 경우 Gemini AI를 사용하여 동적 생성 (Fallback)
     if (!foodData) {
       if (!genAI) {
         return NextResponse.json({ error: 'DB에 해당 식품이 없고, AI를 호출할 API 키가 없습니다.' }, { status: 404 });
@@ -56,6 +62,10 @@ export async function POST(request: NextRequest) {
       
       try {
         foodData = JSON.parse(jsonStr);
+        // 생성된 데이터를 캐시에 영구 저장
+        if (foodData) {
+          await saveFoodToCache(query, foodData);
+        }
       } catch (e) {
         console.error('AI Food Data Generation Error:', responseText);
         return NextResponse.json({ error: 'AI가 해당 식품의 영양 성분 데이터를 생성하는 데 실패했습니다.' }, { status: 500 });
