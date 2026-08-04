@@ -102,23 +102,74 @@ export const mockFoods: NutrientInfo[] = [
   }
 ];
 
+// 레벤슈타인 거리 알고리즘 (두 문자열 간의 유사도 거리 측정)
+function getLevenshteinDistance(a: string, b: string): number {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          Math.min(matrix[i][j - 1] + 1, // insertion
+          matrix[i - 1][j] + 1) // deletion
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+const synonyms: Record<string, string> = {
+  '돼지고기볶음': '제육볶음',
+  '방울토마토': '토마토',
+  '군고구마': '고구마',
+  '찐고구마': '고구마',
+  '잡곡밥': '현미밥',
+  '차돌된장찌개': '된장찌개',
+  '애플': '사과'
+};
+
 export function searchFood(query: string): NutrientInfo | null {
   const normalizedQuery = query.trim().replace(/\s+/g, '');
   
-  // 간단한 동의어 처리(Fuzzy 매칭 흉내)
-  let searchTarget = normalizedQuery;
-  if (normalizedQuery === '돼지고기볶음') {
-    searchTarget = '제육볶음';
-  } else if (normalizedQuery === '방울토마토') {
-    searchTarget = '토마토';
-  } else if (normalizedQuery === '군고구마' || normalizedQuery === '찐고구마') {
-    searchTarget = '고구마';
-  } else if (normalizedQuery === '잡곡밥') {
-    searchTarget = '현미밥';
-  } else if (normalizedQuery === '차돌된장찌개') {
-    searchTarget = '된장찌개';
-  }
+  // 1단계: 동의어 사전을 통한 직접 매칭
+  let searchTarget = synonyms[normalizedQuery] || normalizedQuery;
 
-  const found = mockFoods.find(food => food.name.replace(/\s+/g, '').includes(searchTarget));
-  return found || null;
+  // 2단계: 정확한 포함 여부(Substring) 확인
+  let found = mockFoods.find(food => food.name.replace(/\s+/g, '').includes(searchTarget));
+  if (found) return found;
+
+  // 3단계: 퍼지 매칭 (오타 교정 - 레벤슈타인 거리)
+  // 거리가 2 이하인 가장 가까운 항목 탐색 (ex: 제육복음 -> 제육볶음 (거리 1))
+  let closestFood = null;
+  let minDistance = 3; // 3 이상은 오타가 아닐 가능성이 높음 (매칭 안함)
+  
+  for (const food of mockFoods) {
+    const foodName = food.name.replace(/\s+/g, '');
+    const dist = getLevenshteinDistance(searchTarget, foodName);
+    // 동의어와도 거리 비교
+    let minSynonymDist = minDistance;
+    for (const [synonym, actualName] of Object.entries(synonyms)) {
+      if (actualName === food.name) {
+        const sDist = getLevenshteinDistance(searchTarget, synonym);
+        if (sDist < minSynonymDist) minSynonymDist = sDist;
+      }
+    }
+    
+    const finalDist = Math.min(dist, minSynonymDist);
+    if (finalDist < minDistance) {
+      minDistance = finalDist;
+      closestFood = food;
+    }
+  }
+  
+  return closestFood;
 }

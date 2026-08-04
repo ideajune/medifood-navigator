@@ -21,7 +21,7 @@ function SearchResultContent() {
   const { selectedDiseases } = useAppStore();
 
   const [foodData, setFoodData] = useState<NutrientInfo | null>(null);
-  const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
+  const [streamedText, setStreamedText] = useState('');
   
   const [foodLoading, setFoodLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(true);
@@ -70,6 +70,7 @@ function SearchResultContent() {
     const fetchAnalysis = async (data: NutrientInfo) => {
       setAnalysisLoading(true);
       setAnalysisError('');
+      setStreamedText('');
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
@@ -77,16 +78,33 @@ function SearchResultContent() {
           body: JSON.stringify({ foodData: data, diseases: selectedDiseases }),
         });
         
-        const result = await res.json();
-        if (res.ok && result.analysis) {
-          setAnalysis(result.analysis);
-        } else {
+        if (!res.ok) {
+          const result = await res.json().catch(() => ({}));
           setAnalysisError(result.error || 'AI 분석 중 오류가 발생했습니다.');
+          setAnalysisLoading(false);
+          return;
+        }
+
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error('No reader available');
+        
+        const decoder = new TextDecoder();
+        let done = false;
+        let accumulated = '';
+        
+        setAnalysisLoading(false); // 스트리밍 시작 시 스켈레톤 숨김
+
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            accumulated += decoder.decode(value, { stream: true });
+            setStreamedText(accumulated);
+          }
         }
       } catch (err) {
         console.error('AI 분석 실패:', err);
         setAnalysisError('서버 통신 오류가 발생했습니다.');
-      } finally {
         setAnalysisLoading(false);
       }
     };
@@ -143,7 +161,27 @@ function SearchResultContent() {
     "비타민 및 기타": foodData.vitamins && foodData.vitamins.length > 0 ? foodData.vitamins.join(', ') : '해당 없음'
   };
   
-  const solidContentCalculation = `총 고형분 함량 = 100g - ${foodData.water}g = ${100 - foodData.water}g`;
+  const solidContentCalculation = `총 고형분 함량 = 100g - ${foodData.water}g = ${+(100 - foodData.water).toFixed(2)}g`;
+
+  // 실시간 스트리밍 텍스트 파싱
+  let parsedStep3: string[] = [];
+  let parsedTargets = '';
+  let parsedSideEffects = '';
+
+  if (streamedText) {
+    const step3Match = streamedText.split('===STEP4===');
+    const step3Raw = step3Match[0].replace('===STEP3===', '').trim();
+    parsedStep3 = step3Raw.split('\n').map(s => s.trim().replace(/^- /, '')).filter(Boolean);
+    
+    if (step3Match.length > 1) {
+      const step4Raw = step3Match[1];
+      const targetMatch = step4Raw.split('===SIDEEFFECTS===');
+      parsedTargets = targetMatch[0].replace('===TARGETS===', '').trim();
+      if (targetMatch.length > 1) {
+        parsedSideEffects = targetMatch[1].trim();
+      }
+    }
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 pb-20">
@@ -209,10 +247,11 @@ function SearchResultContent() {
             </div>
           ) : (
             <ul className="list-disc pl-5 space-y-3 text-lg text-gray-700">
-              {analysis?.step3?.map((efficacy, idx) => (
+              {parsedStep3.length > 0 ? parsedStep3.map((efficacy, idx) => (
                 <li key={idx}>{efficacy}</li>
-              ))}
-              {!analysis?.step3 && <li className="text-gray-500">정보를 불러올 수 없습니다.</li>}
+              )) : (
+                <li className="text-gray-500 animate-pulse">분석 중...</li>
+              )}
             </ul>
           )}
         </section>
@@ -247,11 +286,15 @@ function SearchResultContent() {
             <div className="space-y-4 text-lg">
               <div className="space-y-2">
                 <p className="text-orange-800 font-bold">⚠️ 섭취 주의 대상</p>
-                <p className="text-orange-700 leading-relaxed">{analysis?.step4?.targets || '정보 없음'}</p>
+                <p className="text-orange-700 leading-relaxed min-h-[1.5rem]">
+                  {parsedTargets || <span className="animate-pulse">분석 중...</span>}
+                </p>
               </div>
               <div className="space-y-2 pt-2 border-t border-orange-200 border-dashed">
                 <p className="text-orange-800 font-bold">⚠️ 과다 섭취 부작용</p>
-                <p className="text-orange-700 leading-relaxed">{analysis?.step4?.sideEffects || '정보 없음'}</p>
+                <p className="text-orange-700 leading-relaxed min-h-[1.5rem]">
+                  {parsedSideEffects || <span className="animate-pulse">분석 중...</span>}
+                </p>
               </div>
             </div>
           )}

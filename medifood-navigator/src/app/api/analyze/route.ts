@@ -14,19 +14,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '식품 정보가 제공되지 않았습니다.' }, { status: 400 });
     }
 
-    // Gemini API 호출 준비
+    // API 키가 없으면 더미 데이터 반환 (에러 방지 및 UI 테스트용)
     if (!genAI) {
-      // API 키가 없으면 더미 데이터 반환 (에러 방지 및 UI 테스트용)
-      return NextResponse.json({
-        foodData,
-        analysis: {
-          step3: ['(API Key 없음) 풍부한 영양소를 함유하고 있습니다.'],
-          step4: {
-            targets: "API 키가 없어 대상을 분석할 수 없습니다.",
-            sideEffects: ".env.local 파일에 GEMINI_API_KEY를 설정해주세요."
-          }
+      const dummyText = `===STEP3===
+- (API Key 없음) 풍부한 영양소를 함유하고 있습니다.
+===STEP4===
+===TARGETS===
+API 키가 없어 대상을 분석할 수 없습니다.
+===SIDEEFFECTS===
+.env.local 파일에 GEMINI_API_KEY를 설정해주세요.`;
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(dummyText));
+          controller.close();
         }
       });
+      return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
     const prompt = `
 당신은 만성질환자를 위한 영양 전문 AI '메디푸드 네비게이터'입니다.
 다음 식품의 영양 성분과 사용자의 질환 정보를 바탕으로 안전 섭취 가이드를 작성해주세요.
-반드시 JSON 형식으로만 응답해야 하며, 의료적 확언(진단, 처방)은 절대 금지합니다.
+반드시 아래 지정된 텍스트 형식으로 응답하며, 의료적 확언(진단, 처방)은 절대 금지합니다.
 
 [식품 정보]
 - 이름: ${foodData.name}
@@ -50,43 +53,40 @@ Tier 2 (급성 수치 변화 - 당뇨): 당류, 고탄수화물 섭취 주의 (�
 Tier 3 (만성 수치 변화 - 고혈압): 나트륨 섭취 주의.
 Tier 4 (체력/면역력 - 암): Tier 1~3과 상충 시 제한 사항을 무조건 우선시함.
 
-[요구사항]
-Step 3: 영양학적 가치가 높은 핵심 성분 2~3가지를 선정하여 건강에 미치는 영향을 간결한 불릿 포인트로 반환하세요. (반드시 성분명 뒤에 100g 당 함량을 괄호 속에 표기할 것. 예: 성분명(00mg) - 효능 설명)
-Step 4: 섭취 주의 대상과 과다 섭취 시 발생할 수 있는 주요 부작용을 구체적으로 반환하세요.
+[출력 형식]
+반드시 다음 구분자(===STEP3===, ===STEP4===, ===TARGETS===, ===SIDEEFFECTS===)를 사용하여 답변을 작성하세요. 다른 텍스트나 인삿말은 절대 추가하지 마세요. 불릿 포인트는 '-' 기호를 사용하세요.
 
-[출력 JSON 포맷]
-{
-  "step3": [
-    "성분명(함량) - 핵심 성분 효능 1",
-    "성분명(함량) - 핵심 성분 효능 2"
-  ],
-  "step4": {
-    "targets": "섭취 주의 대상: 특정 질환 보유자 등 상세 설명",
-    "sideEffects": "과다 섭취 부작용: 혈당 상승 등 상세 설명"
-  }
-}
-
-- JSON 포맷 외의 텍스트(마크다운 백틱 등)는 절대로 출력하지 마세요.
+===STEP3===
+(영양학적 가치가 높은 핵심 성분 2~3가지를 선정하여 건강에 미치는 영향을 간결한 불릿 포인트로 작성. 반드시 성분명 뒤에 100g 당 함량을 괄호 속에 표기할 것. 예: - 성분명(00mg): 효능 설명)
+===STEP4===
+===TARGETS===
+(섭취 주의 대상: 특정 질환 보유자 등 상세 설명)
+===SIDEEFFECTS===
+(과다 섭취 부작용: 혈당 상승 등 상세 설명)
 `;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    
-    // JSON 추출 (마크다운 및 텍스트 섞임 방어)
-    const match = responseText.match(/\{[\s\S]*\}/);
-    let jsonStr = match ? match[0] : responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-    
-    let analysis;
-    try {
-      analysis = JSON.parse(jsonStr);
-    } catch (e) {
-      console.error('JSON Parsing Error:', e, responseText);
-      return NextResponse.json({ error: 'AI 응답 파싱 실패. 원본: ' + responseText.slice(0, 100) + '...' }, { status: 500 });
-    }
+    const result = await model.generateContentStream(prompt);
 
-    return NextResponse.json({
-      foodData,
-      analysis
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of result.stream) {
+            controller.enqueue(encoder.encode(chunk.text()));
+          }
+        } catch (e: any) {
+          console.error('Streaming error:', e);
+          controller.enqueue(encoder.encode(`\n[ERROR] ${e.message}`));
+        }
+        controller.close();
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache'
+      }
     });
     
   } catch (error: any) {
