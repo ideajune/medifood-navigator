@@ -22,11 +22,11 @@ function SearchResultContent() {
 
   const [foodData, setFoodData] = useState<NutrientInfo | null>(null);
   const [streamedText, setStreamedText] = useState('');
-  
+
   const [foodLoading, setFoodLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(true);
   const [analysisError, setAnalysisError] = useState('');
-  
+
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -47,17 +47,17 @@ function SearchResultContent() {
           body: JSON.stringify({ query }),
         });
         const result = await res.json();
-        
+
         if (!res.ok) {
           setError(result.error || '식품 정보를 찾을 수 없습니다.');
           setFoodLoading(false);
           setAnalysisLoading(false);
           return;
         }
-        
+
         setFoodData(result.foodData);
         setFoodLoading(false);
-        
+
         // 식품 데이터를 성공적으로 가져오면 AI 분석 시작
         fetchAnalysis(result.foodData);
       } catch (err) {
@@ -77,7 +77,7 @@ function SearchResultContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ foodData: data, diseases: selectedDiseases }),
         });
-        
+
         if (!res.ok) {
           const result = await res.json().catch(() => ({}));
           setAnalysisError(result.error || 'AI 분석 중 오류가 발생했습니다.');
@@ -87,11 +87,11 @@ function SearchResultContent() {
 
         const reader = res.body?.getReader();
         if (!reader) throw new Error('No reader available');
-        
+
         const decoder = new TextDecoder();
         let done = false;
         let accumulated = '';
-        
+
         setAnalysisLoading(false); // 스트리밍 시작 시 스켈레톤 숨김
 
         while (!done) {
@@ -160,7 +160,7 @@ function SearchResultContent() {
     "칼륨(mg)": foodData.potassium.toString(),
     "비타민 및 기타": foodData.vitamins && foodData.vitamins.length > 0 ? foodData.vitamins.join(', ') : '해당 없음'
   };
-  
+
   const solidContentCalculation = `총 고형분 함량 = 100g - ${foodData.water}g = ${+(100 - foodData.water).toFixed(2)}g`;
 
   // 실시간 스트리밍 텍스트 파싱
@@ -207,9 +207,11 @@ function SearchResultContent() {
           <h1 className="text-3xl font-black text-gray-900">
             <span className="text-blue-600">"{foodData.name}"</span> 분석 결과
           </h1>
-          <p className="text-lg text-gray-500 mt-2">
-            적용된 질환 필터: {selectedDiseases.length > 0 ? selectedDiseases.join(', ') : '해당 없음'}
-          </p>
+          {selectedDiseases.length > 0 && (
+            <p className="text-lg text-gray-500 mt-2">
+              적용된 질환 필터: {selectedDiseases.join(', ')}
+            </p>
+          )}
         </div>
       </header>
 
@@ -224,7 +226,7 @@ function SearchResultContent() {
               </div>
             ))}
             <div className="flex justify-between pt-2">
-              <span className="font-bold text-blue-700">고형분 계산</span> 
+              <span className="font-bold text-blue-700">고형분 계산</span>
               <strong className="text-blue-700">{solidContentCalculation}</strong>
             </div>
           </div>
@@ -232,7 +234,7 @@ function SearchResultContent() {
 
         {/* Step 2: 고형분 분석 (즉시 렌더링) */}
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col h-full">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">2. 수분 제외 고형분 분석 (2D Pie Chart)</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">2. 고형분 분석 Chart (수분 제외)</h2>
           <div className="flex-1 flex items-center justify-center min-h-[250px]">
             <SolidContentChart data={chartData} />
           </div>
@@ -246,7 +248,7 @@ function SearchResultContent() {
             <span>3. 핵심 성분 효능</span>
             {analysisLoading && <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />}
           </h2>
-          
+
           {analysisLoading ? (
             <div className="space-y-3 animate-pulse">
               <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -275,7 +277,7 @@ function SearchResultContent() {
             </div>
             {analysisLoading && <Loader2 className="w-5 h-5 text-orange-600 animate-spin" />}
           </div>
-          
+
           {analysisLoading ? (
             <div className="space-y-4 animate-pulse">
               <div className="space-y-2">
@@ -304,7 +306,7 @@ function SearchResultContent() {
       <div className="mt-12 p-6 bg-gray-100 rounded-2xl text-gray-500 text-sm sm:text-base leading-relaxed border border-gray-200">
         <h3 className="font-bold text-gray-700 mb-2">⚠️ 의학적 면책 조항 (Disclaimer)</h3>
         <p>
-          본 서비스는 식약처 등의 공공 데이터를 기반으로 제공되는 영양학적 참고 자료이며, 어떠한 경우에도 <strong>의료 진단이나 치료를 대신할 수 없습니다.</strong><br/>
+          본 서비스는 식약처 등의 공공 데이터를 기반으로 제공되는 영양학적 참고 자료이며, 어떠한 경우에도 <strong>의료 진단이나 치료를 대신할 수 없습니다.</strong><br />
           특정 질환(암, 당뇨, 고혈압, 신장/간 질환 등) 치료 중이거나 복용 중인 약물이 있는 경우, 본 정보에 의존하기 전에 <strong>반드시 담당 주치의 또는 임상 영양사와 상의하십시오.</strong>
         </p>
       </div>

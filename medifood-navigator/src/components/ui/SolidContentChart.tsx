@@ -20,13 +20,13 @@ export default function SolidContentChart({ data }: Props) {
   return (
     <div className="w-full flex flex-col items-center">
       <ResponsiveContainer width="100%" height={300}>
-        <PieChart margin={{ top: 20, right: 45, bottom: 20, left: 45 }}>
+        <PieChart margin={{ top: 20, right: 75, bottom: 20, left: 75 }}>
           <Pie
             data={validData}
             cx="50%"
             cy="50%"
-            innerRadius={45}
-            outerRadius={75}
+            innerRadius={40}
+            outerRadius={65}
             paddingAngle={0}
             startAngle={90}
             endAngle={-270}

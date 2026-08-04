@@ -65,6 +65,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ foodData });
   } catch (error: any) {
     console.error('Food API Error:', error);
+    
+    // 할당량(Quota) 초과 또는 429(Rate Limit) 에러 감지
+    const errorMsg = (error.message || '').toLowerCase();
+    if (errorMsg.includes('quota') || errorMsg.includes('429') || errorMsg.includes('rate limit')) {
+      return NextResponse.json({ 
+        error: '일시적으로 AI 분석 서비스 요청 한도가 초과되었습니다. 잠시 후 다시 시도해 주세요.' 
+      }, { status: 429 });
+    }
+
     return NextResponse.json({ error: '서버 내부 오류가 발생했습니다.' }, { status: 500 });
   }
 }
