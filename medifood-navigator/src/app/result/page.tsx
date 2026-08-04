@@ -25,6 +25,7 @@ function SearchResultContent() {
   
   const [foodLoading, setFoodLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(true);
+  const [analysisError, setAnalysisError] = useState('');
   
   const [error, setError] = useState('');
 
@@ -68,6 +69,7 @@ function SearchResultContent() {
 
     const fetchAnalysis = async (data: NutrientInfo) => {
       setAnalysisLoading(true);
+      setAnalysisError('');
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
@@ -78,9 +80,12 @@ function SearchResultContent() {
         const result = await res.json();
         if (res.ok && result.analysis) {
           setAnalysis(result.analysis);
+        } else {
+          setAnalysisError(result.error || 'AI 분석 중 오류가 발생했습니다.');
         }
       } catch (err) {
         console.error('AI 분석 실패:', err);
+        setAnalysisError('서버 통신 오류가 발생했습니다.');
       } finally {
         setAnalysisLoading(false);
       }
@@ -197,6 +202,11 @@ function SearchResultContent() {
               <div className="h-4 bg-gray-200 rounded w-5/6"></div>
               <p className="text-sm text-gray-400 pt-4 mt-2 border-t border-gray-100">AI가 문장을 생성하고 있습니다...</p>
             </div>
+          ) : analysisError ? (
+            <div className="text-red-500 font-medium bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{analysisError}</span>
+            </div>
           ) : (
             <ul className="list-disc pl-5 space-y-3 text-lg text-gray-700">
               {analysis?.step3?.map((efficacy, idx) => (
@@ -227,6 +237,11 @@ function SearchResultContent() {
                 <div className="h-4 bg-orange-200 rounded w-1/4"></div>
                 <div className="h-4 bg-orange-100 rounded w-5/6"></div>
               </div>
+            </div>
+          ) : analysisError ? (
+            <div className="text-red-500 font-medium bg-red-50 p-4 rounded-xl border border-red-100 flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{analysisError}</span>
             </div>
           ) : (
             <div className="space-y-4 text-lg">
