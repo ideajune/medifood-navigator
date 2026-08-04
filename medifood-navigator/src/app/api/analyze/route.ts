@@ -14,6 +14,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '식품 정보가 제공되지 않았습니다.' }, { status: 400 });
     }
 
+    // 캐싱된 데이터(preCalculatedAnalysis)가 존재하면 API를 호출하지 않고 캐시 텍스트를 스트리밍 반환
+    if (foodData.preCalculatedAnalysis) {
+      const cachedText = foodData.preCalculatedAnalysis;
+      const stream = new ReadableStream({
+        async start(controller) {
+          const encoder = new TextEncoder();
+          // 타이핑 효과 연출을 위해 텍스트를 쪼개어 약간의 지연을 주고 전송
+          const chunks = cachedText.match(/.{1,5}/g) || [cachedText];
+          for (const chunk of chunks) {
+            controller.enqueue(encoder.encode(chunk));
+            await new Promise(resolve => setTimeout(resolve, 10)); // 글자당 10ms 지연
+          }
+          controller.close();
+        }
+      });
+      return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+
     // API 키가 없으면 더미 데이터 반환 (에러 방지 및 UI 테스트용)
     if (!genAI) {
       const dummyText = `===STEP3===
