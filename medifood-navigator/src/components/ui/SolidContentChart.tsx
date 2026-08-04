@@ -1,5 +1,5 @@
 'use client';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ChartData {
   name: string;
@@ -17,53 +17,66 @@ export default function SolidContentChart({ data }: Props) {
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value);
 
-  const totalValue = validData.reduce((acc, curr) => acc + curr.value, 0);
-
   return (
     <div className="w-full flex flex-col items-center">
-      <ResponsiveContainer width="100%" height={320}>
-        <PieChart margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart margin={{ top: 20, right: 50, bottom: 20, left: 50 }}>
           <Pie
             data={validData}
             cx="50%"
-            cy="45%"
-            innerRadius={50}
-            outerRadius={80}
+            cy="50%"
+            innerRadius={45}
+            outerRadius={75}
             paddingAngle={0}
             startAngle={90}
             endAngle={-270}
             dataKey="value"
             labelLine={false}
-            label={false}
+            label={(props: any) => {
+              const { name, percent, cx = 0, cy = 0, midAngle = 0, outerRadius = 0, index } = props;
+              const RADIAN = Math.PI / 180;
+              const sin = Math.sin(-midAngle * RADIAN);
+              const cos = Math.cos(-midAngle * RADIAN);
+              
+              const sx = cx + outerRadius * cos;
+              const sy = cy + outerRadius * sin;
+              
+              let ex = cx + (outerRadius + 15) * cos;
+              let ey = cy + (outerRadius + 15) * sin;
+              
+              // 비중이 작은 조각(8% 미만)은 텍스트가 겹치지 않도록 위치 분산
+              if (percent < 0.08) {
+                ey = ey - (index * 12) + 30;
+                ex = ex + (cos >= 0 ? 1 : -1) * (index * 5);
+              }
+              
+              const textAnchor = cos >= 0 ? 'start' : 'end';
+              const textX = ex + (cos >= 0 ? 1 : -1) * 8;
+              
+              return (
+                <g>
+                  <path d={`M${sx},${sy}L${ex},${ey}`} stroke="#9ca3af" fill="none" />
+                  <text 
+                    x={textX} 
+                    y={ey} 
+                    textAnchor={textAnchor} 
+                    fill="#374151" 
+                    fontSize={11}
+                    fontWeight={500}
+                  >
+                    {/* 상하(위아래)로 텍스트 배치하여 가로 길이 단축 */}
+                    <tspan x={textX} dy="-0.4em">{name}</tspan>
+                    <tspan x={textX} dy="1.2em">({(percent * 100).toFixed(1)}%)</tspan>
+                  </text>
+                </g>
+              );
+            }}
           >
             {validData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip formatter={(value: any) => `${Number(value).toFixed(2)}g`} />
-          <Legend 
-            verticalAlign="bottom"
-            align="center"
-            content={(props) => {
-              const { payload } = props;
-              return (
-                <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 mt-4 px-2">
-                  {payload?.map((entry, index) => {
-                    const originalData = entry.payload as ChartData;
-                    const percent = totalValue > 0 ? ((originalData.value / totalValue) * 100).toFixed(1) : '0.0';
-                    return (
-                      <li key={`item-${index}`} className="flex items-center gap-1.5 text-xs sm:text-sm">
-                        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
-                        <span className="text-gray-700 font-medium whitespace-nowrap">
-                          {entry.value} ({percent}%)
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              );
-            }}
-          />
         </PieChart>
       </ResponsiveContainer>
     </div>
