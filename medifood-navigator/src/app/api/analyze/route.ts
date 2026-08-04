@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           const encoder = new TextEncoder();
-          // 타이핑 효과 연출을 위해 텍스트를 쪼개어 약간의 지연을 주고 전송
-          const chunks = cachedText.match(/.{1,5}/g) || [cachedText];
+          // 타이핑 효과 연출을 위해 텍스트를 쪼개어 약간의 지연을 주고 전송 (줄바꿈 포함 매칭)
+          const chunks = cachedText.match(/[\s\S]{1,5}/g) || [cachedText];
           for (const chunk of chunks) {
             controller.enqueue(encoder.encode(chunk));
             await new Promise(resolve => setTimeout(resolve, 10)); // 글자당 10ms 지연

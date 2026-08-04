@@ -175,6 +175,28 @@ function SearchResultContent() {
     }
   }
 
+  // 텍스트 내 줄바꿈을 유지하고 ':' 앞부분(소제목)을 볼드 처리하는 렌더링 함수
+  const renderFormattedText = (text: string) => {
+    if (!text) return null;
+    return text.split('\n').map((line, idx) => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex !== -1) {
+        const before = line.substring(0, colonIndex + 1);
+        const after = line.substring(colonIndex + 1);
+        return (
+          <span key={idx}>
+            <strong>{before}</strong>{after}{'\n'}
+          </span>
+        );
+      }
+      return (
+        <span key={idx}>
+          {line}{'\n'}
+        </span>
+      );
+    });
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 pb-20">
       <header className="flex items-center gap-4 border-b border-gray-200 pb-6">
@@ -239,7 +261,7 @@ function SearchResultContent() {
             </div>
           ) : (
             <div className="whitespace-pre-wrap text-lg text-gray-700 leading-relaxed min-h-[5rem]">
-              {parsedStep3 || <span className="text-gray-500 animate-pulse">분석 중...</span>}
+              {parsedStep3 ? renderFormattedText(parsedStep3) : <span className="text-gray-500 animate-pulse">분석 중...</span>}
             </div>
           )}
         </section>
@@ -272,7 +294,7 @@ function SearchResultContent() {
             </div>
           ) : (
             <div className="whitespace-pre-wrap text-lg text-orange-800 leading-relaxed min-h-[5rem]">
-              {parsedStep4 || <span className="text-orange-600 animate-pulse">분석 중...</span>}
+              {parsedStep4 ? renderFormattedText(parsedStep4) : <span className="text-orange-600 animate-pulse">분석 중...</span>}
             </div>
           )}
         </section>
