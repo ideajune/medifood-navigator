@@ -164,22 +164,14 @@ function SearchResultContent() {
   const solidContentCalculation = `총 고형분 함량 = 100g - ${foodData.water}g = ${+(100 - foodData.water).toFixed(2)}g`;
 
   // 실시간 스트리밍 텍스트 파싱
-  let parsedStep3: string[] = [];
-  let parsedTargets = '';
-  let parsedSideEffects = '';
+  let parsedStep3 = '';
+  let parsedStep4 = '';
 
   if (streamedText) {
-    const step3Match = streamedText.split('===STEP4===');
-    const step3Raw = step3Match[0].replace('===STEP3===', '').trim();
-    parsedStep3 = step3Raw.split('\n').map(s => s.trim().replace(/^- /, '')).filter(Boolean);
-    
-    if (step3Match.length > 1) {
-      const step4Raw = step3Match[1];
-      const targetMatch = step4Raw.split('===SIDEEFFECTS===');
-      parsedTargets = targetMatch[0].replace('===TARGETS===', '').trim();
-      if (targetMatch.length > 1) {
-        parsedSideEffects = targetMatch[1].trim();
-      }
+    const splitText = streamedText.split('===STEP4===');
+    parsedStep3 = splitText[0].replace('===STEP3===', '').trim();
+    if (splitText.length > 1) {
+      parsedStep4 = splitText[1].trim();
     }
   }
 
@@ -246,13 +238,9 @@ function SearchResultContent() {
               <span>{analysisError}</span>
             </div>
           ) : (
-            <ul className="list-disc pl-5 space-y-3 text-lg text-gray-700">
-              {parsedStep3.length > 0 ? parsedStep3.map((efficacy, idx) => (
-                <li key={idx}>{efficacy}</li>
-              )) : (
-                <li className="text-gray-500 animate-pulse">분석 중...</li>
-              )}
-            </ul>
+            <div className="whitespace-pre-wrap text-lg text-gray-700 leading-relaxed min-h-[5rem]">
+              {parsedStep3 || <span className="text-gray-500 animate-pulse">분석 중...</span>}
+            </div>
           )}
         </section>
 
@@ -283,19 +271,8 @@ function SearchResultContent() {
               <span>{analysisError}</span>
             </div>
           ) : (
-            <div className="space-y-4 text-lg">
-              <div className="space-y-2">
-                <p className="text-orange-800 font-bold">⚠️ 섭취 주의 대상</p>
-                <p className="text-orange-700 leading-relaxed min-h-[1.5rem]">
-                  {parsedTargets || <span className="animate-pulse">분석 중...</span>}
-                </p>
-              </div>
-              <div className="space-y-2 pt-2 border-t border-orange-200 border-dashed">
-                <p className="text-orange-800 font-bold">⚠️ 과다 섭취 부작용</p>
-                <p className="text-orange-700 leading-relaxed min-h-[1.5rem]">
-                  {parsedSideEffects || <span className="animate-pulse">분석 중...</span>}
-                </p>
-              </div>
+            <div className="whitespace-pre-wrap text-lg text-orange-800 leading-relaxed min-h-[5rem]">
+              {parsedStep4 || <span className="text-orange-600 animate-pulse">분석 중...</span>}
             </div>
           )}
         </section>
