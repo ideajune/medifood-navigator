@@ -2,7 +2,7 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CheckCircle, Loader2, CalendarDays } from 'lucide-react';
 import SolidContentChart from '@/components/ui/SolidContentChart';
 import { useAppStore } from '@/store/useAppStore';
 import type { NutrientInfo } from '@/lib/mockData';
@@ -149,19 +149,20 @@ function SearchResultContent() {
   ];
 
   const nutritionTable: Record<string, string> = {
-    "칼로리(kcal)": foodData.calories.toString(),
-    "수분(g)": foodData.water.toString(),
-    "탄수화물(g)": foodData.carbohydrate.toString(),
-    "단백질(g)": foodData.protein.toString(),
-    "지방(g)": foodData.fat.toString(),
-    "당류(g)": foodData.sugar.toString(),
+    "칼로리(kcal)": foodData.calories?.toString() || '0',
+    "수분(g)": foodData.water?.toString() || '0',
+    "탄수화물(g)": foodData.carbohydrate?.toString() || '0',
+    "단백질(g)": foodData.protein?.toString() || '0',
+    "지방(g)": foodData.fat?.toString() || '0',
+    "당류(g)": foodData.sugar?.toString() || '0',
     "식이섬유(g)": foodData.dietaryFiber !== undefined ? foodData.dietaryFiber.toString() : '0',
-    "나트륨(mg)": foodData.sodium.toString(),
-    "칼륨(mg)": foodData.potassium.toString(),
+    "나트륨(mg)": foodData.sodium?.toString() || '0',
+    "칼륨(mg)": foodData.potassium?.toString() || '0',
     "비타민 및 기타": foodData.vitamins && foodData.vitamins.length > 0 ? foodData.vitamins.join(', ') : '해당 없음'
   };
 
-  const solidContentCalculation = `총 고형분 함량 = 100g - ${foodData.water}g = ${+(100 - foodData.water).toFixed(2)}g`;
+  const waterContent = foodData.water || 0;
+  const solidContentCalculation = `총 고형분 함량 = 100g - ${waterContent}g = ${+(100 - waterContent).toFixed(2)}g`;
 
   // 실시간 스트리밍 텍스트 파싱
   let parsedStep3 = '';
@@ -220,11 +221,20 @@ function SearchResultContent() {
         <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">1. 기본 영양 성분 (100g 기준)</h2>
           <div className="space-y-3 text-lg text-gray-700">
-            {Object.entries(nutritionTable).map(([key, val]) => (
-              <div key={key} className="flex justify-between border-b border-gray-50 pb-2">
-                <span>{key}</span> <strong>{val}</strong>
-              </div>
-            ))}
+            {Object.entries(nutritionTable).map(([key, val]) => {
+              const isSeparator = key.includes('수분') || key.includes('지방');
+              const isBoldKey = key.includes('탄수화물') || key.includes('단백질') || key.includes('지방');
+              
+              return (
+                <div 
+                  key={key} 
+                  className={`flex justify-between pb-2 ${isSeparator ? 'border-b-2 border-gray-200' : 'border-b border-gray-50'}`}
+                >
+                  <span className={isBoldKey ? 'font-bold text-gray-900' : ''}>{key}</span> 
+                  <strong className={isBoldKey ? 'text-gray-900' : ''}>{val}</strong>
+                </div>
+              );
+            })}
             <div className="flex justify-between pt-2">
               <span className="font-bold text-blue-700">고형분 계산</span>
               <strong className="text-blue-700">{solidContentCalculation}</strong>
@@ -309,6 +319,26 @@ function SearchResultContent() {
           본 서비스는 식약처 등의 공공 데이터를 기반으로 제공되는 영양학적 참고 자료이며, 어떠한 경우에도 <strong>의료 진단이나 치료를 대신할 수 없습니다.</strong><br />
           특정 질환(암, 당뇨, 고혈압, 신장/간 질환 등) 치료 중이거나 복용 중인 약물이 있는 경우, 본 정보에 의존하기 전에 <strong>반드시 담당 주치의 또는 임상 영양사와 상의하십시오.</strong>
         </p>
+      </div>
+
+      {/* 1:1 맞춤 식단 컨설팅 CTA */}
+      <div className="mt-8 p-8 bg-blue-50 rounded-3xl border border-blue-100 shadow-sm flex flex-col items-center text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+          <CalendarDays className="w-8 h-8 text-blue-600" />
+        </div>
+        <h3 className="text-2xl font-bold text-blue-900 mb-3">
+          전문가와 함께하는<br/>1:1 맞춤 식단 컨설팅
+        </h3>
+        <p className="text-lg text-blue-800 mb-6 font-medium leading-relaxed">
+          맞춤 식단 상담이 필요하신가요?<br/>
+          신청해 주시면 2영업일 내에 전문 상담사가 연락드립니다.
+        </p>
+        <Link 
+          href="/reservation"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg py-4 px-10 rounded-2xl shadow-lg active:scale-95 transition-all w-full sm:w-auto inline-block text-center"
+        >
+          상담예약
+        </Link>
       </div>
     </div>
   );

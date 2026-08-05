@@ -24,9 +24,9 @@ export default function SolidContentChart({ data }: Props) {
           <Pie
             data={validData}
             cx="50%"
-            cy="50%"
-            innerRadius={45}
-            outerRadius={75}
+            cy="68%"
+            innerRadius={50}
+            outerRadius={85}
             paddingAngle={0}
             startAngle={90}
             endAngle={-270}
@@ -41,17 +41,29 @@ export default function SolidContentChart({ data }: Props) {
               const sx = cx + outerRadius * cos;
               const sy = cy + outerRadius * sin;
               
-              let ex = cx + (outerRadius + 15) * cos;
-              let ey = cy + (outerRadius + 15) * sin;
+              let ex = cx + (outerRadius + 20) * cos;
+              let ey = cy + (outerRadius + 20) * sin;
               
-              // 비중이 작은 조각(8% 미만)은 텍스트가 겹치지 않도록 위치 분산
+              // 비중이 작은 조각(8% 미만)은 텍스트가 잘리지 않도록 차트 위쪽 텅 빈 공간에 가로로 쫙 펼쳐서(지그재그) 배치
               if (percent < 0.08) {
-                ey = ey - (index * 12) + 30;
-                ex = ex + (cos >= 0 ? 1 : -1) * (index * 5);
+                const total = validData.reduce((sum, item) => sum + item.value, 0);
+                const smallStartIndex = validData.findIndex(d => (d.value / total) < 0.08);
+                const smallCount = validData.length - smallStartIndex;
+                const smallIndex = index - smallStartIndex;
+                
+                // Y축: 위쪽 공간을 활용하여 지그재그(높낮이 교차) 배치로 텍스트 상하 겹침 방지
+                ey = cy - outerRadius - 20 - ((smallIndex % 2) * 35);
+                
+                // X축: 가운데(cx)를 기준으로 좌우 220px 너비에 골고루 분산 배치
+                // index가 낮을수록(조금 더 큰 파이, 왼쪽에 위치) 텍스트도 왼쪽에 배치하여 선 꼬임 방지
+                const spreadWidth = 220; 
+                const startX = cx - (spreadWidth / 2);
+                const spacing = smallCount > 1 ? spreadWidth / (smallCount - 1) : 0;
+                ex = startX + (smallIndex * spacing);
               }
               
-              const textAnchor = cos >= 0 ? 'start' : 'end';
-              const textX = ex + (cos >= 0 ? 1 : -1) * 8;
+              const textAnchor = percent < 0.08 ? 'middle' : (cos >= 0 ? 'start' : 'end');
+              const textX = percent < 0.08 ? ex : ex + (cos >= 0 ? 1 : -1) * 8;
               
               return (
                 <g>
